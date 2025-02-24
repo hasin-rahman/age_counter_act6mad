@@ -1,7 +1,11 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:window_size/window_size.dart';
 
 void main() {
+  setupWindow();
   runApp(
     ChangeNotifierProvider(
       create: (context) => Counter(),
@@ -10,12 +14,40 @@ void main() {
   );
 }
 
+const double windowWidth = 360;
+const double windowHeight = 640;
+
+void setupWindow() {
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    WidgetsFlutterBinding.ensureInitialized();
+    setWindowTitle('Provider Counter');
+    setWindowMinSize(const Size(windowWidth, windowHeight));
+    setWindowMaxSize(const Size(windowWidth, windowHeight));
+    getCurrentScreen().then((screen) {
+      setWindowFrame(
+        Rect.fromCenter(
+          center: screen!.frame.center,
+          width: windowWidth,
+          height: windowHeight,
+        ),
+      );
+    });
+  }
+}
+
 class Counter with ChangeNotifier {
   int value = 0;
 
-  void increment() {
-    value += 1;
+  void setValue(double newValue) {
+    value = newValue.toInt();
     notifyListeners();
+  }
+
+  void increment() {
+    if (value < 99) {
+      value += 1;
+      notifyListeners();
+    }
   }
 
   void decrement() {
@@ -68,6 +100,15 @@ class MyHomePage extends StatelessWidget {
             backgroundColor = Colors.grey;
           }
 
+          Color progressBarColor;
+          if (counter.value <= 33) {
+            progressBarColor = Colors.green;
+          } else if (counter.value <= 67) {
+            progressBarColor = Colors.yellow;
+          } else {
+            progressBarColor = Colors.red;
+          }
+
           return Container(
             color: backgroundColor,
             child: Center(
@@ -111,6 +152,34 @@ class MyHomePage extends StatelessWidget {
                         textAlign: TextAlign.center,
                       ),
                     ),
+                    Slider(
+                      value: counter.value.toDouble(),
+                      min: 0,
+                      max: 99,
+                      divisions: 99,
+                      label: counter.value.toString(),
+                      onChanged:
+                          (value) => context.read<Counter>().setValue(value),
+                    ),
+                    Container(
+                      height: 10,
+                      width: 200,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(5),
+                        color: Colors.grey[300],
+                      ),
+                      child: FractionallySizedBox(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: counter.value / 99,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(5),
+                            color: progressBarColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
